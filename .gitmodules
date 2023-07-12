@@ -1,0 +1,6 @@
+[submodule "vendor/pico-sdk"]
+	path = vendor/pico-sdk
+	url = https://github.com/raspberrypi/pico-sdk.git
+[submodule "vendor/free-rtos"]
+	path = vendor/free-rtos
+	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
