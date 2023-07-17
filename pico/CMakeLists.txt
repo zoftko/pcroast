@@ -1,3 +1,6 @@
-add_executable(pcroast pcroast.c)
-target_link_libraries(pcroast pico_stdlib pico_stdio_usb)
+add_executable(pcroast pcroast.c wifi.c)
+pico_enable_stdio_usb(pcroast 0)
+pico_enable_stdio_uart(pcroast 1)
+
+target_link_libraries(pcroast pico_stdlib pico_cyw43_arch_lwip_sys_freertos FreeRTOS-Kernel-Heap4)
 pico_add_extra_outputs(pcroast)
