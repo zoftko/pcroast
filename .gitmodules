@@ -4,3 +4,6 @@
 [submodule "vendor/free-rtos"]
 	path = vendor/free-rtos
 	url = https://github.com/FreeRTOS/FreeRTOS-Kernel.git
+[submodule "vendor/ugfx"]
+	path = vendor/ugfx
+	url = https://git.ugfx.io/uGFX/ugfx.git
