@@ -7,6 +7,7 @@ Contains all third party code in the form of git submodules. This includes:
 
 * pico-sdk: Provides libraries to write code for RP2040 processors
 * free-rtos: Real time operating system to keep track of all the control tasks performed by the system
+* ugfx: Graphics library used for the display
 
 ### `pico`
 All RP2040 dependent code is included in this directory. Basically

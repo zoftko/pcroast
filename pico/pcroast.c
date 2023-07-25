@@ -1,4 +1,5 @@
 #include <FreeRTOS.h>
+#include <gfx.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
@@ -30,11 +31,14 @@ void vBlinkLedTask(__unused void *pvParameters) {
 }
 
 void vStartupTask(__unused void *pvParameters) {
-    LOG_INFO("initializing cyw43 module");
+    LOG_INFO("initializing ugfx");
+    gfxInit();
+    gFont font = gdispOpenFont("DejaVuSans12");
+    gdispDrawString(32, 80, "PCROAST", font, White);
+    gdispCloseFont(font);
 
-    int res = cyw43_arch_init();
-    LOG_DEBUG("cyw43_arch_init returned %d", res);
-    if (res) {
+    LOG_INFO("initializing cyw43 module");
+    if (cyw43_arch_init()) {
         LOG_ERROR("failed to initialize cyw43 module");
         while (1) continue;
     }
