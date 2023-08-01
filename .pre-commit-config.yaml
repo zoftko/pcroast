@@ -7,6 +7,7 @@ repos:
         args:
           - --fix=lf
       - id: end-of-file-fixer
+      - id: check-yaml
   - repo: local
     hooks:
       - id: clang-format
