@@ -1,8 +1,10 @@
 cmake_minimum_required(VERSION 3.20)
-set(FREERTOS_PORT GCC_RP2040)
-set(PICO_BOARD pico_w)
-include(vendor/pico-sdk/pico_sdk_init.cmake)
-include(vendor/free-rtos/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kernel_import.cmake)
+if (NOT DEFINED HOST_BUILD)
+    set(FREERTOS_PORT GCC_RP2040)
+    set(PICO_BOARD pico_w)
+    include(vendor/pico-sdk/pico_sdk_init.cmake)
+    include(vendor/free-rtos/portable/ThirdParty/GCC/RP2040/FreeRTOS_Kernel_import.cmake)
+endif()
 
 project(pcroast
     VERSION 0.2.0
@@ -31,7 +33,17 @@ add_compile_definitions("WIFI_TIMEOUT=${WIFI_TIMEOUT}")
 add_compile_definitions("WIFI_SSID=\"${WIFI_SSID}\"")
 add_compile_definitions("WIFI_PSK=\"${WIFI_PSK}\"")
 
+include_directories(include)
+add_subdirectory(src)
 
-pico_sdk_init()
-include_directories(pico include vendor/ugfx/drivers/gdisp/ST7735)
-add_subdirectory(pico)
+if (NOT DEFINED HOST_BUILD)
+    pico_sdk_init()
+    include_directories(pico include vendor/ugfx/drivers/gdisp/ST7735)
+    add_subdirectory(pico)
+endif()
+
+if (DEFINED HOST_BUILD)
+    add_subdirectory(vendor/googletest)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
