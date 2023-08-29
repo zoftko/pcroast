@@ -1,16 +1,20 @@
 #include <FreeRTOS.h>
 #include <gfx.h>
+#include <hardware/flash.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 #include <task.h>
 
 #include "logging.h"
+#include "uid.h"
 #include "wifi.h"
 
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t startupTaskHandle;
 TaskHandle_t blinkLedTaskHandle;
+
+static char unique_id[17];
 
 void vApplicationMallocFailedHook(void) { LOG_ERROR("malloc has failed"); }
 
@@ -76,6 +80,10 @@ void vLaunch() {
 }
 
 int main(void) {
+    uint8_t *uid = NULL;
+    flash_get_unique_id(uid);
+    uid_to_str(uid, unique_id);
+
     stdio_init_all();
     LOG_INFO("starting %s version %s", PROJECT_NAME, PROJECT_VERSION);
 
