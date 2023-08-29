@@ -50,3 +50,16 @@ jobs:
           cd build-release
           cmake ../
           make
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          submodules: true
+      - name: build host
+        run: |
+          cmake -DHOST_BUILD=YES -B cmake-build-host
+          make -C cmake-build-host
+      - name: run tests
+        run: |
+          make -C cmake-build-host ARGS="-V" test
