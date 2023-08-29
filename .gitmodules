@@ -7,3 +7,6 @@
 [submodule "vendor/ugfx"]
 	path = vendor/ugfx
 	url = https://git.ugfx.io/uGFX/ugfx.git
+[submodule "vendor/googletest"]
+	path = vendor/googletest
+	url = https://github.com/google/googletest.git
