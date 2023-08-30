@@ -12,6 +12,9 @@ TaskHandle_t wifiTaskHandle;
 TaskHandle_t startupTaskHandle;
 TaskHandle_t blinkLedTaskHandle;
 
+static char prv_mac_address[13];
+const char *mac_address = prv_mac_address;
+
 void vApplicationMallocFailedHook(void) { LOG_ERROR("malloc has failed"); }
 
 void vApplicationStackOverflowHook(__unused TaskHandle_t xTask, char *pcTaskName) {
@@ -43,6 +46,17 @@ void vStartupTask(__unused void *pvParameters) {
         while (1) continue;
     }
     cyw43_arch_enable_sta_mode();
+    sprintf(
+        prv_mac_address,
+        "%x%x%x%x%x%x",
+        cyw43_state.mac[0],
+        cyw43_state.mac[1],
+        cyw43_state.mac[2],
+        cyw43_state.mac[3],
+        cyw43_state.mac[4],
+        cyw43_state.mac[5]
+    );
+    LOG_DEBUG("Using MAC %s as unique identifier", mac_address);
 
     xTaskCreate(
         vBlinkLedTask, "BlinkLED", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1,
