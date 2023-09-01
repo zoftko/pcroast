@@ -1,16 +1,23 @@
 #include <FreeRTOS.h>
 #include <gfx.h>
+#include <hardware/spi.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 #include <task.h>
+#include <timers.h>
 
 #include "logging.h"
+#include "pinout.h"
+#include "temperature.h"
 #include "wifi.h"
 
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t startupTaskHandle;
 TaskHandle_t blinkLedTaskHandle;
+TaskHandle_t temperatureTaskHandle;
+
+TimerHandle_t temperatureTimerHandle;
 
 void vApplicationMallocFailedHook(void) { LOG_ERROR("malloc has failed"); }
 
@@ -28,6 +35,10 @@ void vBlinkLedTask(__unused void *pvParameters) {
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
         vTaskDelay(pdMS_TO_TICKS(1980));
     }
+}
+
+void vTemperatureTimerCallback(__unused TimerHandle_t handle) {
+    xTaskNotify(temperatureTaskHandle, 0, eNoAction);
 }
 
 void vStartupTask(__unused void *pvParameters) {
@@ -59,6 +70,20 @@ void vStartupTask(__unused void *pvParameters) {
     LOG_DEBUG("wifi task created");
     xTaskNotify(wifiTaskHandle, 0, eNoAction);
 
+    xTaskCreate(
+        vReadTemperatureTask, "TempTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3,
+        &temperatureTaskHandle
+    );
+    configASSERT(&temperatureTaskHandle);
+    LOG_DEBUG("temp reading task created");
+
+    temperatureTimerHandle = xTimerCreate(
+        "TempTimer", pdMS_TO_TICKS(1000), pdTRUE, (void *)0, vTemperatureTimerCallback
+    );
+    configASSERT(&temperatureTimerHandle);
+    xTimerStart(temperatureTimerHandle, 0);
+    LOG_DEBUG("temperature timer started");
+
     LOG_DEBUG("deleting startup task");
     vTaskDelete(NULL);
 }
@@ -75,10 +100,24 @@ void vLaunch() {
     vTaskStartScheduler();
 }
 
+void prvSetupHardware() {
+    LOG_INFO("setting up hardware");
+
+    spi_init(spi1, 1000000);
+    spi_set_format(spi1, 16, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
+    gpio_init_mask(SPI1_GPIO_MASK);
+    gpio_set_function(SPI1_SCK, GPIO_FUNC_SPI);
+    gpio_set_function(SPI1_MISO, GPIO_FUNC_SPI);
+    gpio_set_dir(SPI1_CS, GPIO_OUT);
+    gpio_put(SPI1_CS, GPIO_OUT);
+    LOG_INFO("spi1 setup successfully");
+}
+
 int main(void) {
     stdio_init_all();
     LOG_INFO("starting %s version %s", PROJECT_NAME, PROJECT_VERSION);
 
+    prvSetupHardware();
     vLaunch();
     while (1) continue;
 }
