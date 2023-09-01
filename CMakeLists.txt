@@ -1,4 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
+
+set(HOST_BUILD ${HOST_BUILD})
 if (NOT DEFINED HOST_BUILD)
     set(FREERTOS_PORT GCC_RP2040)
     set(PICO_BOARD pico_w)
