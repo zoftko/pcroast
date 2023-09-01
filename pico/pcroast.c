@@ -1,5 +1,4 @@
 #include <FreeRTOS.h>
-#include <gfx.h>
 #include <hardware/spi.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
@@ -7,6 +6,7 @@
 #include <task.h>
 #include <timers.h>
 
+#include "graphics.h"
 #include "logging.h"
 #include "pinout.h"
 #include "temperature.h"
@@ -42,11 +42,8 @@ void vTemperatureTimerCallback(__unused TimerHandle_t handle) {
 }
 
 void vStartupTask(__unused void *pvParameters) {
-    LOG_INFO("initializing ugfx");
-    gfxInit();
-    gFont font = gdispOpenFont("DejaVuSans12");
-    gdispDrawString(32, 80, "PCROAST", font, White);
-    gdispCloseFont(font);
+    LOG_INFO("initializing graphics");
+    graphicsInit();
 
     LOG_INFO("initializing cyw43 module");
     if (cyw43_arch_init()) {
