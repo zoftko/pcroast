@@ -1,10 +1,10 @@
 #include <FreeRTOS.h>
-#include <gfx.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 #include <task.h>
 
+#include "graphics.h"
 #include "logging.h"
 #include "wifi.h"
 
@@ -31,11 +31,8 @@ void vBlinkLedTask(__unused void *pvParameters) {
 }
 
 void vStartupTask(__unused void *pvParameters) {
-    LOG_INFO("initializing ugfx");
-    gfxInit();
-    gFont font = gdispOpenFont("DejaVuSans12");
-    gdispDrawString(32, 80, "PCROAST", font, White);
-    gdispCloseFont(font);
+    LOG_INFO("initializing graphics");
+    graphicsInit();
 
     LOG_INFO("initializing cyw43 module");
     if (cyw43_arch_init()) {
