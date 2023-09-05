@@ -5,6 +5,6 @@
 #include <stdio.h>
 
 void graphicsInit();
-void graphicsSetTemperature(uint8_t temperature);
+void graphicsSetTemperature(float temperature);
 
 #endif
