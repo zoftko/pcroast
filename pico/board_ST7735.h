@@ -3,14 +3,6 @@
 
 #include <gfx.h>
 
-#define TFT_CS 17
-#define TFT_SCK 18
-#define TFT_SDA 19
-
-#define TFT_DC 21
-
-#define TFT_BAUD 8000000
-
 void init_board(GDisplay *g);
 void post_init_board(GDisplay *g);
 void set_backlight(GDisplay *g, gU16 value);
