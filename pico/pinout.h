@@ -16,7 +16,7 @@
 #define SPI0_TFT_SCK 18
 #define SPI0_TFT_SDA 19
 
-#define TFT_DC 21
+#define TFT_DC 20
 #define TFT_BAUD 8000000
 
 /**
@@ -24,9 +24,9 @@
  * SPI1 is used for reading data from MAX6675 sensors. No transmission is required, only
  * reception.
  */
-#define SPI1_6675_SCK 10
-#define SPI1_6675_CS 9
-#define SPI1_6675_MISO 8
-#define SPI1_6675_GPIO_MASK ((1 << SPI1_6675_SCK) | (1 << SPI1_6675_CS) | (1 << SPI1_6675_MISO))
+#define SPI1_6675_SCK 14
+#define SPI1_6675_CS 13
+#define SPI1_6675_MISO 12
+#define SPI1_TX 15  // Not used but need to be defined to a known GPIO
 
 #endif  // PCROAST_PINOUT_H

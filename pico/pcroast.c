@@ -102,9 +102,11 @@ void prvSetupHardware() {
 
     spi_init(spi1, 1000000);
     spi_set_format(spi1, 16, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
-    gpio_init_mask(SPI1_6675_GPIO_MASK);
+    gpio_set_function(SPI1_TX, GPIO_FUNC_SPI);
     gpio_set_function(SPI1_6675_SCK, GPIO_FUNC_SPI);
     gpio_set_function(SPI1_6675_MISO, GPIO_FUNC_SPI);
+
+    gpio_init(SPI1_6675_CS);
     gpio_set_dir(SPI1_6675_CS, GPIO_OUT);
     gpio_put(SPI1_6675_CS, GPIO_OUT);
     LOG_INFO("spi1 setup successful");
@@ -117,6 +119,7 @@ void prvSetupHardware() {
     spi_init(spi0, TFT_BAUD);
     gpio_set_function(SPI0_TFT_SCK, GPIO_FUNC_SPI);
     gpio_set_function(SPI0_TFT_SDA, GPIO_FUNC_SPI);
+
     gpio_init(SPI0_TFT_CS);
     gpio_put(SPI0_TFT_CS, 1);
     gpio_set_dir(SPI0_TFT_CS, GPIO_OUT);
