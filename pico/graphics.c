@@ -1,16 +1,16 @@
 #include "graphics.h"
 
 static GHandle temperatureLabel;
-static char temperatureString[7] = "000 C.";
+static char temperatureString[7] = "000.00";
 
-static gFont dejaVu12Font;
+static gFont dejaVu20Font;
 
 void graphicsInit() {
     gfxInit();
 
-    dejaVu12Font = gdispOpenFont("DejaVuSans16");
+    dejaVu20Font = gdispOpenFont("DejaVuSans20");
 
-    gwinSetDefaultFont(dejaVu12Font);
+    gwinSetDefaultFont(dejaVu20Font);
     gwinSetDefaultStyle(&BlackWidgetStyle, FALSE);
 
     GWidgetInit wi;
@@ -19,13 +19,13 @@ void graphicsInit() {
     wi.g.show = gTrue;
     wi.g.x = 24;
     wi.g.y = 62;
-    wi.text = "000 C.";
+    wi.text = temperatureString;
 
     temperatureLabel = gwinLabelCreate(NULL, &wi);
     graphicsSetTemperature(0);
 }
 
-void graphicsSetTemperature(uint8_t temperature) {
-    sprintf(temperatureString, "%03d C.", temperature);
+void graphicsSetTemperature(float temperature) {
+    sprintf(temperatureString, "%06.2f", temperature);
     gwinSetText(temperatureLabel, temperatureString, gTrue);
 }

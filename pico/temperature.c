@@ -7,6 +7,7 @@
 #include <sys/cdefs.h>
 #include <task.h>
 
+#include "graphics.h"
 #include "logging.h"
 #include "max6675.h"
 #include "pinout.h"
@@ -29,7 +30,7 @@ void vReadTemperatureTask(__unused void *pvParameters) {
         if (max6675_process(reading, &temperature)) {
             LOG_WARNING("incorrect reading from spi1");
         } else {
-            LOG_INFO("temperature: %.2f", temperature);
+            graphicsSetTemperature(temperature);
         }
     }
 }
