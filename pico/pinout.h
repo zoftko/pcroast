@@ -17,7 +17,7 @@
 #define SPI0_TFT_SDA 19
 
 #define TFT_DC 20
-#define TFT_BAUD 8000000
+#define TFT_BAUD 16000000
 
 /**
  * MAX6675

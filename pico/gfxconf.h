@@ -102,8 +102,8 @@
 //     #define GDISP_INCLUDE_FONT_UI2                   GFXOFF
 //     #define GDISP_INCLUDE_FONT_LARGENUMBERS          GFXOFF
 //     #define GDISP_INCLUDE_FONT_DEJAVUSANS12          GFXOFF
-//     #define GDISP_INCLUDE_FONT_DEJAVUSANS16          GFXOFF
-#define GDISP_INCLUDE_FONT_DEJAVUSANS20 GFXON
+#define GDISP_INCLUDE_FONT_DEJAVUSANS16 GFXON
+//     #define GDISP_INCLUDE_FONT_DEJAVUSANS20          GFXOFF
 //     #define GDISP_INCLUDE_FONT_DEJAVUSANS24          GFXOFF
 //     #define GDISP_INCLUDE_FONT_DEJAVUSANS32          GFXOFF
 //     #define GDISP_INCLUDE_FONT_DEJAVUSANSBOLD12      GFXOFF
@@ -206,7 +206,7 @@
 //     #define GWIN_CONSOLE_ESCSEQ                      GFXOFF
 //     #define GWIN_CONSOLE_USE_BASESTREAM              GFXOFF
 //     #define GWIN_CONSOLE_USE_FLOAT                   GFXOFF
-// #define GWIN_NEED_GRAPH                              GFXOFF
+#define GWIN_NEED_GRAPH GFXON
 // #define GWIN_NEED_GL3D                               GFXOFF
 
 #define GWIN_NEED_WIDGET GFXON
