@@ -19,8 +19,6 @@ TaskHandle_t temperatureTaskHandle;
 
 TimerHandle_t temperatureTimerHandle;
 
-void vApplicationMallocFailedHook(void) { LOG_ERROR("malloc has failed"); }
-
 void vApplicationStackOverflowHook(__unused TaskHandle_t xTask, char *pcTaskName) {
     LOG_ERROR("stack overflow for task %s", pcTaskName);
     LOG_ERROR("restarting system");
