@@ -1,5 +1,3 @@
-#include "temperature.h"
-
 #include <FreeRTOS.h>
 #include <hardware/spi.h>
 #include <pico/stdlib.h>

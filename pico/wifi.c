@@ -1,6 +1,6 @@
-#include "wifi.h"
-
 #include <FreeRTOS.h>
+#include <pico/cyw43_arch.h>
+#include <sys/cdefs.h>
 #include <task.h>
 
 #include "logging.h"

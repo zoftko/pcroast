@@ -8,9 +8,8 @@
 
 #include "graphics.h"
 #include "logging.h"
+#include "os_tasks.h"
 #include "pinout.h"
-#include "temperature.h"
-#include "wifi.h"
 
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t startupTaskHandle;
