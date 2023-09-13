@@ -29,4 +29,10 @@
 #define SPI1_6675_MISO 12
 #define SPI1_TX 15  // Not used but need to be defined to a known GPIO
 
+#define STOP_BTN 22
+#define START_BTN 21
+#define BUZZER_GPIO 2
+#define BUZZER_PWM_SLICE 1
+#define BUZZER_PWM_CHANNEL 0
+
 #endif  // PCROAST_PINOUT_H

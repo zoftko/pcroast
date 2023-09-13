@@ -11,5 +11,7 @@ target_link_libraries(
         st7735
         hardware_spi
         max6675
+        hardware_pwm
+        beeper
 )
 pico_add_extra_outputs(pcroast)
