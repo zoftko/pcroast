@@ -1,4 +1,5 @@
 #include <FreeRTOS.h>
+#include <hardware/pwm.h>
 #include <hardware/spi.h>
 #include <hardware/watchdog.h>
 #include <pico/cyw43_arch.h>
@@ -6,6 +7,7 @@
 #include <task.h>
 #include <timers.h>
 
+#include "beeper.h"
 #include "graphics.h"
 #include "logging.h"
 #include "os_tasks.h"
@@ -14,9 +16,12 @@
 TaskHandle_t wifiTaskHandle;
 TaskHandle_t startupTaskHandle;
 TaskHandle_t blinkLedTaskHandle;
+TaskHandle_t beepTaskHandle;
 TaskHandle_t temperatureTaskHandle;
 
 TimerHandle_t temperatureTimerHandle;
+
+const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
 
 void vApplicationStackOverflowHook(__unused TaskHandle_t xTask, char *pcTaskName) {
     LOG_ERROR("stack overflow for task %s", pcTaskName);
@@ -31,6 +36,26 @@ void vBlinkLedTask(__unused void *pvParameters) {
         vTaskDelay(pdMS_TO_TICKS(20));
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
         vTaskDelay(pdMS_TO_TICKS(1980));
+    }
+}
+
+void vBeepTask(__unused void *pvParameters) {
+    struct BeeperConfig config;
+    while (1) {
+        uint32_t data = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        beeper_parse(data, &config);
+        LOG_DEBUG("beeping %d - %d - %d", config.beeps, config.msOn, config.msOff);
+
+        gpio_set_function(BUZZER_GPIO, GPIO_FUNC_PWM);
+        for (uint8_t count = 0; count < config.beeps; count++) {
+            pwm_set_enabled(BUZZER_PWM_SLICE, true);
+            vTaskDelay(pdMS_TO_TICKS(config.msOn));
+            pwm_set_enabled(BUZZER_PWM_SLICE, false);
+            vTaskDelay(pdMS_TO_TICKS(config.msOff));
+        }
+
+        gpio_set_function(BUZZER_GPIO, GPIO_FUNC_SIO);
+        gpio_put(BUZZER_GPIO, 0);
     }
 }
 
@@ -55,6 +80,13 @@ void vStartupTask(__unused void *pvParameters) {
     );
     configASSERT(&blinkLedTaskHandle);
     LOG_DEBUG("blink task created");
+
+    xTaskCreate(
+        vBeepTask, "Beeper", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 1, &beepTaskHandle
+    );
+    configASSERT(beepTaskHandle);
+    LOG_DEBUG("beeper task created");
+    xTaskNotify(beepTaskHandle, beeper_dump(&beeperStartup), eSetValueWithOverwrite);
 
     netif_set_status_callback(netif_default, vNetifStatusCallback);
     xTaskCreate(
@@ -121,6 +153,18 @@ void prvSetupHardware() {
     gpio_put(SPI0_TFT_CS, 1);
     gpio_set_dir(SPI0_TFT_CS, GPIO_OUT);
     LOG_INFO("spio0 gpio setup successful");
+
+    gpio_init_mask((1 << START_BTN) | (1 << STOP_BTN));
+    gpio_pull_up(START_BTN);
+    gpio_pull_up(STOP_BTN);
+    LOG_INFO("user button gpio setup successful");
+
+    gpio_set_function(BUZZER_GPIO, GPIO_FUNC_PWM);
+    pwm_config config = pwm_get_default_config();
+    pwm_config_set_clkdiv_int(&config, 255);
+    pwm_config_set_wrap(&config, 250);
+    pwm_init(BUZZER_PWM_SLICE, &config, false);
+    pwm_set_gpio_level(BUZZER_GPIO, 125);
 }
 
 int main(void) {
