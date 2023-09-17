@@ -18,10 +18,26 @@ TaskHandle_t startupTaskHandle;
 TaskHandle_t blinkLedTaskHandle;
 TaskHandle_t beepTaskHandle;
 TaskHandle_t temperatureTaskHandle;
+TaskHandle_t startControlTaskHandle;
 
 TimerHandle_t temperatureTimerHandle;
 
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
+
+static volatile uint8_t reflowStarted = false;
+
+void startButtonCallback(void) {
+    if (gpio_get_irq_event_mask(START_BTN) & GPIO_IRQ_EDGE_FALL) {
+        gpio_acknowledge_irq(START_BTN, GPIO_IRQ_EDGE_FALL);
+        gpio_xor_mask(1 << SSR_CONTROL_GPIO);
+    } else {
+        return;
+    }
+    if (reflowStarted == true) return;
+
+    reflowStarted = true;
+    xTaskNotifyFromISR(startControlTaskHandle, 0, eNoAction, NULL);
+}
 
 void vApplicationStackOverflowHook(__unused TaskHandle_t xTask, char *pcTaskName) {
     LOG_ERROR("stack overflow for task %s", pcTaskName);
@@ -56,6 +72,14 @@ void vBeepTask(__unused void *pvParameters) {
 
         gpio_set_function(BUZZER_GPIO, GPIO_FUNC_SIO);
         gpio_put(BUZZER_GPIO, 0);
+    }
+}
+
+void vStartControlTask(__unused void *pvParameters) {
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        LOG_INFO("starting Reflow Process");
+        // gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     }
 }
 
@@ -102,6 +126,13 @@ void vStartupTask(__unused void *pvParameters) {
     );
     configASSERT(&temperatureTaskHandle);
     LOG_DEBUG("temp reading task created");
+
+    xTaskCreate(
+        vStartControlTask, "StartTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2,
+        &startControlTaskHandle
+    );
+    configASSERT(&startControlTaskHandle);
+    LOG_DEBUG("start control task created");
 
     temperatureTimerHandle = xTimerCreate(
         "TempTimer", pdMS_TO_TICKS(1000), pdTRUE, (void *)0, vTemperatureTimerCallback
@@ -165,6 +196,19 @@ void prvSetupHardware() {
     pwm_config_set_wrap(&config, 250);
     pwm_init(BUZZER_PWM_SLICE, &config, false);
     pwm_set_gpio_level(BUZZER_GPIO, 125);
+
+    gpio_init(SSR_CONTROL_GPIO);
+    gpio_set_dir(SSR_CONTROL_GPIO, GPIO_OUT);
+    gpio_put(SSR_CONTROL_GPIO, 0);
+
+    gpio_init(ZERO_CROSS_GPIO);
+    gpio_set_dir(ZERO_CROSS_GPIO, GPIO_IN);
+    // gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
+
+    gpio_init(START_BTN);
+    gpio_set_dir(START_BTN, GPIO_IN);
+    gpio_pull_up(START_BTN);
+    // gpio_set_irq_enabled(START_BTN, GPIO_IRQ_EDGE_FALL, true);
 }
 
 int main(void) {
