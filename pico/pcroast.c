@@ -29,7 +29,6 @@ static volatile uint8_t reflowStarted = false;
 void startButtonCallback(void) {
     if (gpio_get_irq_event_mask(START_BTN) & GPIO_IRQ_EDGE_FALL) {
         gpio_acknowledge_irq(START_BTN, GPIO_IRQ_EDGE_FALL);
-        gpio_xor_mask(1 << SSR_CONTROL_GPIO);
     } else {
         return;
     }
@@ -79,7 +78,7 @@ void vStartControlTask(__unused void *pvParameters) {
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         LOG_INFO("starting Reflow Process");
-        // gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
+        gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     }
 }
 
@@ -127,8 +126,8 @@ void vStartupTask(__unused void *pvParameters) {
     configASSERT(&temperatureTaskHandle);
     LOG_DEBUG("temp reading task created");
 
-    xTaskCreate(
-        vStartControlTask, "StartTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2,
+    xTaskCreateAffinitySet(
+        vStartControlTask, "StartTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, 0x01,
         &startControlTaskHandle
     );
     configASSERT(&startControlTaskHandle);
@@ -142,12 +141,13 @@ void vStartupTask(__unused void *pvParameters) {
     LOG_DEBUG("temperature timer started");
 
     LOG_DEBUG("deleting startup task");
+    irq_set_enabled(IO_IRQ_BANK0, true);
     vTaskDelete(NULL);
 }
 
 void vLaunch() {
-    xTaskCreate(
-        vStartupTask, "Startup", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2,
+    xTaskCreateAffinitySet(
+        vStartupTask, "Startup", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, 0x01,
         &startupTaskHandle
     );
     configASSERT(&startupTaskHandle);
@@ -188,6 +188,8 @@ void prvSetupHardware() {
     gpio_init_mask((1 << START_BTN) | (1 << STOP_BTN));
     gpio_pull_up(START_BTN);
     gpio_pull_up(STOP_BTN);
+    gpio_add_raw_irq_handler(START_BTN, &startButtonCallback);
+    gpio_set_irq_enabled(START_BTN, GPIO_IRQ_EDGE_FALL, true);
     LOG_INFO("user button gpio setup successful");
 
     gpio_set_function(BUZZER_GPIO, GPIO_FUNC_PWM);
@@ -203,12 +205,7 @@ void prvSetupHardware() {
 
     gpio_init(ZERO_CROSS_GPIO);
     gpio_set_dir(ZERO_CROSS_GPIO, GPIO_IN);
-    // gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_FALL | GPIO_IRQ_EDGE_RISE, true);
-
-    gpio_init(START_BTN);
-    gpio_set_dir(START_BTN, GPIO_IN);
-    gpio_pull_up(START_BTN);
-    // gpio_set_irq_enabled(START_BTN, GPIO_IRQ_EDGE_FALL, true);
+    gpio_add_raw_irq_handler(ZERO_CROSS_GPIO, &vZeroCrossCallback);
 }
 
 int main(void) {

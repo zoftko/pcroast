@@ -34,7 +34,8 @@
 #define BUZZER_GPIO 2
 #define BUZZER_PWM_SLICE 1
 
-#define ZERO_CROSS_GPIO 7
+#define ZERO_CROSS_GPIO 6
+
 #define SSR_CONTROL_GPIO 3
 
 #endif  // PCROAST_PINOUT_H
