@@ -1,4 +1,4 @@
-add_executable(pcroast pcroast.c wifi.c st7735.c graphics.c temperature.c)
+add_executable(pcroast pcroast.c wifi.c st7735.c graphics.c temperature.c control.c)
 pico_enable_stdio_usb(pcroast 0)
 pico_enable_stdio_uart(pcroast 1)
 
