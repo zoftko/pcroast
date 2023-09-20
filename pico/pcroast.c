@@ -5,7 +5,6 @@
 #include <pico/cyw43_arch.h>
 #include <pico/stdlib.h>
 #include <task.h>
-#include <timers.h>
 
 #include "beeper.h"
 #include "graphics.h"
@@ -19,8 +18,6 @@ TaskHandle_t blinkLedTaskHandle;
 TaskHandle_t beepTaskHandle;
 TaskHandle_t temperatureTaskHandle;
 TaskHandle_t startControlTaskHandle;
-
-TimerHandle_t temperatureTimerHandle;
 
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
 
@@ -82,10 +79,6 @@ void vStartControlTask(__unused void *pvParameters) {
     }
 }
 
-void vTemperatureTimerCallback(__unused TimerHandle_t handle) {
-    xTaskNotify(temperatureTaskHandle, 0, eNoAction);
-}
-
 void vStartupTask(__unused void *pvParameters) {
     LOG_INFO("initializing graphics");
     graphicsInit();
@@ -133,13 +126,6 @@ void vStartupTask(__unused void *pvParameters) {
     configASSERT(&startControlTaskHandle);
     LOG_DEBUG("start control task created");
 
-    temperatureTimerHandle = xTimerCreate(
-        "TempTimer", pdMS_TO_TICKS(1000), pdTRUE, (void *)0, vTemperatureTimerCallback
-    );
-    configASSERT(&temperatureTimerHandle);
-    xTimerStart(temperatureTimerHandle, 0);
-    LOG_DEBUG("temperature timer started");
-
     LOG_DEBUG("deleting startup task");
     irq_set_enabled(IO_IRQ_BANK0, true);
     vTaskDelete(NULL);
@@ -169,12 +155,10 @@ void prvSetupHardware() {
     gpio_init(SPI1_6675_CS);
     gpio_set_dir(SPI1_6675_CS, GPIO_OUT);
     gpio_put(SPI1_6675_CS, GPIO_OUT);
-    LOG_INFO("spi1 setup successful");
 
     gpio_init(TFT_DC);
     gpio_put(TFT_DC, 1);
     gpio_set_dir(TFT_DC, GPIO_OUT);
-    LOG_INFO("tft gpio setup successful");
 
     spi_init(spi0, TFT_BAUD);
     gpio_set_function(SPI0_TFT_SCK, GPIO_FUNC_SPI);
@@ -183,14 +167,12 @@ void prvSetupHardware() {
     gpio_init(SPI0_TFT_CS);
     gpio_put(SPI0_TFT_CS, 1);
     gpio_set_dir(SPI0_TFT_CS, GPIO_OUT);
-    LOG_INFO("spio0 gpio setup successful");
 
     gpio_init_mask((1 << START_BTN) | (1 << STOP_BTN));
     gpio_pull_up(START_BTN);
     gpio_pull_up(STOP_BTN);
     gpio_add_raw_irq_handler(START_BTN, &startButtonCallback);
     gpio_set_irq_enabled(START_BTN, GPIO_IRQ_EDGE_FALL, true);
-    LOG_INFO("user button gpio setup successful");
 
     gpio_set_function(BUZZER_GPIO, GPIO_FUNC_PWM);
     pwm_config config = pwm_get_default_config();
