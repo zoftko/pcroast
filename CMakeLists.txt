@@ -40,7 +40,7 @@ add_subdirectory(src)
 
 if (NOT DEFINED HOST_BUILD)
     pico_sdk_init()
-    include_directories(pico include vendor/ugfx/drivers/gdisp/ST7735)
+    include_directories(pico config vendor/ugfx/drivers/gdisp/ST7735)
     add_subdirectory(pico)
 endif()
 

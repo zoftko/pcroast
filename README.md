@@ -10,6 +10,9 @@ Contains all third party code in the form of git submodules. This includes:
 * ugfx: Graphics library used for the display
 * googletest: Used for unit testing
 
+### `config`
+Contains all configuration files for the application, e.g. `FreeRTOSConfig.h` or `lwipopts.h`.
+
 ### `pico`
 All RP2040 dependent code is included in this directory. Basically
 all peripheral access. It also includes configuration for RTOS.
