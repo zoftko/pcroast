@@ -13,5 +13,6 @@ target_link_libraries(
         max6675
         hardware_pwm
         beeper
+        pid
 )
 pico_add_extra_outputs(pcroast)
