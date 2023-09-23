@@ -5,6 +5,8 @@
  * Collection of all tasks, timers or callbacks that run in the application.
  */
 
+void vStartControl();
+void vControlReflowTask(void *pvParameters);
 void vReadTemperatureTask(void *pvParameters);
 
 void vWifiTask(void *pvParameters);

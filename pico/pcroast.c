@@ -18,6 +18,7 @@ TaskHandle_t blinkLedTaskHandle;
 TaskHandle_t beepTaskHandle;
 TaskHandle_t temperatureTaskHandle;
 TaskHandle_t startControlTaskHandle;
+TaskHandle_t controlReflowTaskHandle;
 
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
 
@@ -75,6 +76,7 @@ void vStartControlTask(__unused void *pvParameters) {
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         LOG_INFO("starting Reflow Process");
+        vStartControl();
         gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
     }
 }
@@ -125,6 +127,13 @@ void vStartupTask(__unused void *pvParameters) {
     );
     configASSERT(&startControlTaskHandle);
     LOG_DEBUG("start control task created");
+
+    xTaskCreate(
+        vControlReflowTask, "CtrlTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3,
+        &controlReflowTaskHandle
+    );
+    configASSERT(&controlReflowTaskHandle);
+    LOG_DEBUG("control task created");
 
     LOG_DEBUG("deleting startup task");
     irq_set_enabled(IO_IRQ_BANK0, true);
