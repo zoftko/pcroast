@@ -1,8 +1,11 @@
-#ifndef PCROAST_OS_TASKS_H
-#define PCROAST_OS_TASKS_H
+#ifndef PCROAST_KERNEL_H
+#define PCROAST_KERNEL_H
+
+#include <pico/cyw43_arch.h>
 
 /**
- * Collection of all tasks, timers or callbacks that run in the application.
+ * Collection of all tasks, timers or callbacks that run in the application. Structs for task
+ * intercommunication  are also included here.
  */
 
 /**
@@ -14,10 +17,27 @@
 void vStartControl();
 void vStopControl();
 void vControlReflowTask(void *pvParameters);
+
 void vReadTemperatureTask(void *pvParameters);
 void vInitControl();
+void vControlHttpLogger(void *pvParameters);
+
+struct HttpRequest {
+    char *request_line;
+    char *payload;
+};
 
 void vWifiTask(void *pvParameters);
+
+/**
+ * Perform a HTTP 1.1 request.
+ * This task waits permanently to be notified for running. A 32 bit pointer to a HttpRequest
+ * struct must be passed through the notification. Said HttpRequest specifies the URL, METHOD
+ * and payload to use.
+ * @param pvParameters
+ */
+void vHttpRequestTask(void *pvParameters);
+
 void vNetifStatusCallback(struct netif *netif);
 
 /**
@@ -28,4 +48,4 @@ void vNetifStatusCallback(struct netif *netif);
  */
 void vZeroCrossCallback(void);
 
-#endif  // PCROAST_OS_TASKS_H
+#endif  // PCROAST_KERNEL_H

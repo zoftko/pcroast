@@ -27,14 +27,6 @@ add_compile_definitions("DEBUG_BUILD=$<CONFIG:Debug>")
 add_compile_definitions("PROJECT_NAME=\"${CMAKE_PROJECT_NAME}\"")
 add_compile_definitions("PROJECT_VERSION=\"${CMAKE_PROJECT_VERSION}\"")
 
-if (NOT WIFI_TIMEOUT)
-    set(WIFI_TIMEOUT 10000)
-endif ()
-
-add_compile_definitions("WIFI_TIMEOUT=${WIFI_TIMEOUT}")
-add_compile_definitions("WIFI_SSID=\"${WIFI_SSID}\"")
-add_compile_definitions("WIFI_PSK=\"${WIFI_PSK}\"")
-
 include_directories(include)
 add_subdirectory(src)
 

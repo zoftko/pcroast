@@ -3,12 +3,14 @@
 
 #include "beeper.h"
 #include "graphics.h"
+#include "kernel.h"
 #include "logging.h"
 #include "max6675.h"
 #include "pid.h"
 #include "pinout.h"
 
 enum ProfileStage { RAMP_TO_SOAK, SOAKING, RAMP_TO_REFLOW, COOLING, IDLE };
+enum RequestType { CREATE_SESSION, POST_MEASUREMENTS };
 
 struct Profile {
     float soakTemp;
@@ -16,10 +18,24 @@ struct Profile {
     uint8_t soakTime;
 };
 
+struct Measurement {
+    int sequence;
+    float temperature;
+};
+
 struct Profile lowTempProfile = {.soakTemp = 90, .soakTime = 60, .reflowTemp = 150};
 
 static const float rampSoakDerGain = -85.0f;
 static const float rampReflowDerGain = -35.0f;
+
+static char sessionPayload[256];
+struct HttpRequest newSessionRequest = {
+    .request_line = "POST /api/session HTTP/1.1\r\n", .payload = sessionPayload};
+
+static volatile struct Measurement measurements[20];
+static char measurementPayload[512];
+struct HttpRequest postMeasurementRequest = {
+    .request_line = "POST /api/measurement HTTP/1.1\r\n", .payload = measurementPayload};
 
 struct PidController controller = {
     .output = 0,
@@ -46,9 +62,12 @@ static volatile uint32_t zeroCrossEvents = 0;
 
 static uint16_t reading;
 static float tempReading;
+static float tempAccumulator;
 static float temperature = 0;
 static float targetTemperature = 0;
 
+extern TaskHandle_t httpRequestTaskHandle;
+extern TaskHandle_t controlHttpLoggerHandle;
 extern TaskHandle_t controlReflowTaskHandle;
 extern TaskHandle_t beepTaskHandle;
 
@@ -84,6 +103,7 @@ void vInitControl() {
 
 void vStartControl() {
     LOG_INFO("ramp to soak");
+    xTaskNotify(controlHttpLoggerHandle, CREATE_SESSION, eSetValueWithOverwrite);
     setStageLED(LED_WORKING_GPIO);
     clearControllerError();
     controller.gainDer = rampSoakDerGain;
@@ -93,6 +113,7 @@ void vStartControl() {
 void vStopControl() {
     stage = COOLING;
     dutyCycle = 0;
+    seconds = 0;
     gpio_put(SSR_CONTROL_GPIO, 0);
     graphicsClearDutyCycle();
     setStageLED(LED_COOLING_GPIO);
@@ -151,7 +172,15 @@ void vControlReflowTask(__unused void *pvParameters) {
         pid_compute_error(temperature, targetTemperature, &controller);
         dutyCycle = (uint8_t)controller.error;
         graphicsSetDutyCycle(dutyCycle);
+
+        volatile struct Measurement *measurement = &(measurements[seconds % 20]);
+        measurement->temperature = temperature;
+        measurement->sequence = seconds;
         seconds++;
+
+        if ((seconds != 0) && ((seconds % 10) == 0)) {
+            xTaskNotify(controlHttpLoggerHandle, POST_MEASUREMENTS, eSetValueWithOverwrite);
+        }
     }
 }
 
@@ -172,14 +201,14 @@ void vReadTemperatureTask(__unused void *pvParameters) {
             LOG_WARNING("incorrect reading from spi1");
         } else {
             temperatureReads++;
-            temperature += tempReading;
+            tempAccumulator += tempReading;
             if (temperatureReads != TEMP_READING_AMOUNT) { continue; }
 
             temperatureReads = 0;
-            temperature /= TEMP_READING_AMOUNT;
+            temperature = tempAccumulator / TEMP_READING_AMOUNT;
+            tempAccumulator = 0;
             xTaskNotify(controlReflowTaskHandle, 0, eNoAction);
             graphicsSetTemperature(temperature);
-            temperature = 0;
         }
     }
 }
@@ -198,4 +227,51 @@ void vZeroCrossCallback(void) {
         gpio_put(SSR_CONTROL_GPIO, 0);
     }
     zeroCrossEvents++;
+}
+
+void vControlHttpLogger(__unused void *pvParameters) {
+    int bytes;
+    int bytes_left;
+    int data_offset = 0;
+    char *payloadOffset;
+    enum RequestType request;
+    snprintf(
+        sessionPayload, 256,
+        "{\"soak_temperature\": %g, \"soak_time\": %d, \"reflow_peak_temp\": %g}",
+        lowTempProfile.soakTemp, lowTempProfile.soakTime, lowTempProfile.reflowTemp
+    );
+    while (1) {
+        request = ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        switch (request) {
+            case CREATE_SESSION:
+                xTaskNotify(
+                    httpRequestTaskHandle, (uint32_t)&newSessionRequest, eSetValueWithOverwrite
+                );
+                break;
+            case POST_MEASUREMENTS:
+                bytes_left = 512;
+                payloadOffset = measurementPayload;
+
+                bytes = snprintf(payloadOffset, bytes_left, "{\"measurements\": [");
+                payloadOffset += bytes;
+                bytes_left -= bytes;
+                for (int count = data_offset; count < (data_offset + 10); count++) {
+                    bytes = snprintf(
+                        payloadOffset, bytes_left, "{\"temp\": %f, \"sequence\": %d},",
+                        measurements[count].temperature, measurements[count].sequence
+                    );
+                    payloadOffset += bytes;
+                    bytes_left -= bytes;
+                }
+                // Remove trailing comma by overriding it
+                payloadOffset--;
+                bytes_left--;
+                snprintf(payloadOffset, bytes_left, "]}");
+                data_offset = data_offset == 0 ? 10 : 0;
+                xTaskNotify(
+                    httpRequestTaskHandle, (uint32_t)&postMeasurementRequest, eSetValueWithOverwrite
+                );
+                break;
+        }
+    }
 }
