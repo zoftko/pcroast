@@ -48,7 +48,7 @@ jobs:
         run: |
           mkdir build-release
           cd build-release
-          cmake ../
+          cmake -DAPI_IPV4_ADDR="192.168.100.28" -DWIFI_SSID="hello" -DWIFI_PSK="bye" ../
           make
   tests:
     runs-on: ubuntu-latest

@@ -8,8 +8,8 @@
 
 #include "beeper.h"
 #include "graphics.h"
+#include "kernel.h"
 #include "logging.h"
-#include "os_tasks.h"
 #include "pinout.h"
 
 TaskHandle_t wifiTaskHandle;
@@ -20,6 +20,8 @@ TaskHandle_t temperatureTaskHandle;
 TaskHandle_t startControlTaskHandle;
 TaskHandle_t stopControlTaskHandle;
 TaskHandle_t controlReflowTaskHandle;
+TaskHandle_t controlHttpLoggerHandle;
+TaskHandle_t httpRequestTaskHandle;
 
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
 
@@ -137,6 +139,13 @@ void vStartupTask(__unused void *pvParameters) {
     xTaskNotify(wifiTaskHandle, 0, eNoAction);
 
     xTaskCreate(
+        vHttpRequestTask, "Http", configMINIMAL_STACK_SIZE * 2, NULL, tskIDLE_PRIORITY + 2,
+        &httpRequestTaskHandle
+    );
+    configASSERT(&httpRequestTaskHandle);
+    LOG_DEBUG("http request task created");
+
+    xTaskCreate(
         vReadTemperatureTask, "TempTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3,
         &temperatureTaskHandle
     );
@@ -164,6 +173,13 @@ void vStartupTask(__unused void *pvParameters) {
     );
     configASSERT(&controlReflowTaskHandle);
     LOG_DEBUG("control task created");
+
+    xTaskCreate(
+        vControlHttpLogger, "LogTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2,
+        &controlHttpLoggerHandle
+    );
+    configASSERT(&controlHttpLoggerHandle);
+    LOG_DEBUG("control log task created");
 
     LOG_DEBUG("deleting startup task");
     irq_set_enabled(IO_IRQ_BANK0, true);
