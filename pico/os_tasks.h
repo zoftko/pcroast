@@ -5,7 +5,14 @@
  * Collection of all tasks, timers or callbacks that run in the application.
  */
 
+/**
+ * The following three control tasks internally use the same variables.
+ * In a SMP environment care must be taken to synchronize access. The easiest is to
+ * ensure they only run on a certain core, this can be achieved with Free RTOS core affinity.
+ */
+
 void vStartControl();
+void vStopControl();
 void vControlReflowTask(void *pvParameters);
 void vReadTemperatureTask(void *pvParameters);
 

@@ -40,9 +40,21 @@ static float targetTemperature = 0;
 
 extern TaskHandle_t controlReflowTaskHandle;
 
+static void clearControllerError() {
+    controller.error2 = 0;
+    controller.error1 = 0;
+    controller.error = 0;
+}
+
 void vStartControl() {
     LOG_INFO("ramp to soak");
+    clearControllerError();
     stage = RAMP_TO_SOAK;
+}
+
+void vStopControl() {
+    stage = IDLE;
+    gpio_put(SSR_CONTROL_GPIO, 0);
 }
 
 void vControlReflowTask(__unused void *pvParameters) {
@@ -63,10 +75,7 @@ void vControlReflowTask(__unused void *pvParameters) {
                 soakSeconds++;
                 if (soakSeconds >= lowTempProfile.soakTime) {
                     LOG_INFO("ramp to reflow");
-                    controller.error2 = 0;
-                    controller.error1 = 0;
-                    controller.error = 0;
-
+                    clearControllerError();
                     stage = RAMP_TO_REFLOW;
                 }
                 break;
