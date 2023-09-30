@@ -197,6 +197,10 @@ void prvSetupHardware() {
     gpio_init(ZERO_CROSS_GPIO);
     gpio_set_dir(ZERO_CROSS_GPIO, GPIO_IN);
     gpio_add_raw_irq_handler(ZERO_CROSS_GPIO, &vZeroCrossCallback);
+
+    gpio_init_mask(LED_MASK);
+    gpio_set_dir_out_masked(LED_MASK);
+    gpio_put_masked(LED_MASK, 0);
 }
 
 int main(void) {
