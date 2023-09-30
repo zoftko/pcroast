@@ -18,6 +18,7 @@ TaskHandle_t blinkLedTaskHandle;
 TaskHandle_t beepTaskHandle;
 TaskHandle_t temperatureTaskHandle;
 TaskHandle_t startControlTaskHandle;
+TaskHandle_t stopControlTaskHandle;
 TaskHandle_t controlReflowTaskHandle;
 
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
@@ -34,6 +35,18 @@ void startButtonCallback(void) {
 
     reflowStarted = true;
     xTaskNotifyFromISR(startControlTaskHandle, 0, eNoAction, NULL);
+}
+
+void stopButtonCallback(void) {
+    if (gpio_get_irq_event_mask(STOP_BTN) & GPIO_IRQ_EDGE_FALL) {
+        gpio_acknowledge_irq(STOP_BTN, GPIO_IRQ_EDGE_FALL);
+    } else {
+        return;
+    }
+    if (reflowStarted == false) return;
+
+    reflowStarted = false;
+    xTaskNotifyFromISR(stopControlTaskHandle, 0, eNoAction, NULL);
 }
 
 void vApplicationStackOverflowHook(__unused TaskHandle_t xTask, char *pcTaskName) {
@@ -78,6 +91,15 @@ void vStartControlTask(__unused void *pvParameters) {
         LOG_INFO("starting Reflow Process");
         vStartControl();
         gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, true);
+    }
+}
+
+void vStopControlTask(__unused void *pvParameters) {
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        LOG_INFO("stopping reflow process");
+        vStopControl();
+        gpio_set_irq_enabled(ZERO_CROSS_GPIO, GPIO_IRQ_EDGE_RISE | GPIO_IRQ_EDGE_FALL, false);
     }
 }
 
@@ -128,8 +150,15 @@ void vStartupTask(__unused void *pvParameters) {
     configASSERT(&startControlTaskHandle);
     LOG_DEBUG("start control task created");
 
-    xTaskCreate(
-        vControlReflowTask, "CtrlTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3,
+    xTaskCreateAffinitySet(
+        vStopControlTask, "StopTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 2, 0x01,
+        &stopControlTaskHandle
+    );
+    configASSERT(&stopControlTaskHandle);
+    LOG_DEBUG("stop control task created");
+
+    xTaskCreateAffinitySet(
+        vControlReflowTask, "CtrlTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3, 0x01,
         &controlReflowTaskHandle
     );
     configASSERT(&controlReflowTaskHandle);
@@ -180,8 +209,12 @@ void prvSetupHardware() {
     gpio_init_mask((1 << START_BTN) | (1 << STOP_BTN));
     gpio_pull_up(START_BTN);
     gpio_pull_up(STOP_BTN);
+
     gpio_add_raw_irq_handler(START_BTN, &startButtonCallback);
     gpio_set_irq_enabled(START_BTN, GPIO_IRQ_EDGE_FALL, true);
+
+    gpio_add_raw_irq_handler(STOP_BTN, &stopButtonCallback);
+    gpio_set_irq_enabled(STOP_BTN, GPIO_IRQ_EDGE_FALL, true);
 
     gpio_set_function(BUZZER_GPIO, GPIO_FUNC_PWM);
     pwm_config config = pwm_get_default_config();
