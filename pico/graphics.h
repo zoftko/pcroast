@@ -6,5 +6,7 @@
 
 void graphicsInit();
 void graphicsSetTemperature(float temperature);
+void graphicsSetDutyCycle(uint8_t duty);
+void graphicsClearDutyCycle(void);
 
 #endif

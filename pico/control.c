@@ -1,6 +1,7 @@
 #include <hardware/gpio.h>
 #include <hardware/spi.h>
 
+#include "beeper.h"
 #include "graphics.h"
 #include "logging.h"
 #include "max6675.h"
@@ -27,6 +28,8 @@ struct PidController controller = {
     .error = 0,
 };
 
+const struct BeeperConfig beeperAlertEnd = {.beeps = 5, .msOn = 600, .msOff = 400};
+
 static volatile uint16_t seconds = 0;
 static volatile uint16_t soakSeconds = 0;
 static volatile enum ProfileStage stage = IDLE;
@@ -39,6 +42,7 @@ static float temperature;
 static float targetTemperature = 0;
 
 extern TaskHandle_t controlReflowTaskHandle;
+extern TaskHandle_t beepTaskHandle;
 
 static void clearControllerError() {
     controller.sumError = 0;
@@ -54,7 +58,9 @@ void vStartControl() {
 
 void vStopControl() {
     stage = IDLE;
+    dutyCycle = 0;
     gpio_put(SSR_CONTROL_GPIO, 0);
+    graphicsClearDutyCycle();
 }
 
 void vControlReflowTask(__unused void *pvParameters) {
@@ -83,8 +89,10 @@ void vControlReflowTask(__unused void *pvParameters) {
                 targetTemperature = lowTempProfile.reflowTemp;
                 if (temperature >= lowTempProfile.reflowTemp) {
                     LOG_INFO("reflow ended");
-                    stage = IDLE;
-                    dutyCycle = 0;
+                    xTaskNotify(
+                        beepTaskHandle, beeper_dump(&beeperAlertEnd), eSetValueWithOverwrite
+                    );
+                    vStopControl();
                     continue;
                 }
                 break;
@@ -92,6 +100,7 @@ void vControlReflowTask(__unused void *pvParameters) {
 
         pid_compute_error(temperature, targetTemperature, &controller);
         dutyCycle = (uint8_t)controller.error;
+        graphicsSetDutyCycle(dutyCycle);
         seconds++;
     }
 }

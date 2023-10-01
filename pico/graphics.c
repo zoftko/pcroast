@@ -6,6 +6,9 @@ static GGraphObject graphObj;
 static GHandle temperatureLabel;
 static char temperatureString[7] = "      ";
 
+static GHandle dutyCycleLabel;
+static char dutyCycleString[5] = "     ";
+
 static gFont dejaVu16Font;
 
 static uint8_t xPoint;
@@ -39,6 +42,15 @@ void graphicsInit() {
     wi.text = temperatureString;
     temperatureLabel = gwinLabelCreate(NULL, &wi);
 
+    gwinWidgetClearInit(&wi);
+    wi.g.show = gTrue;
+    wi.g.x = 80;
+    wi.g.y = 144;
+    wi.g.height = 16;
+    wi.g.width = 48;
+    wi.text = dutyCycleString;
+    dutyCycleLabel = gwinLabelCreate(NULL, &wi);
+
     GWindowInit winInit;
     gwinClearInit(&winInit);
     winInit.show = gTrue;
@@ -71,4 +83,14 @@ void graphicsSetTemperature(float temperature) {
 
     gwinGraphDrawPoint(temperatureGraph, xPoint, yPoint);
     xPoint++;
+}
+
+void graphicsSetDutyCycle(uint8_t duty) {
+    sprintf(dutyCycleString, "%03d%%", duty);
+    gwinSetText(dutyCycleLabel, dutyCycleString, gFalse);
+}
+
+void graphicsClearDutyCycle(void) {
+    sprintf(dutyCycleString, "    ");
+    gwinSetText(dutyCycleLabel, dutyCycleString, gFalse);
 }
