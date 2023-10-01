@@ -38,4 +38,9 @@
 
 #define SSR_CONTROL_GPIO 3
 
+#define LED_IDLE_GPIO 11
+#define LED_WORKING_GPIO 10
+#define LED_COOLING_GPIO 9
+#define LED_MASK ((1 << LED_IDLE_GPIO) | (1 << LED_WORKING_GPIO) | (1 << LED_COOLING_GPIO))
+
 #endif  // PCROAST_PINOUT_H

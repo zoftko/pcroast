@@ -8,7 +8,7 @@
 #include "pid.h"
 #include "pinout.h"
 
-enum ProfileStage { RAMP_TO_SOAK, SOAKING, RAMP_TO_REFLOW, IDLE };
+enum ProfileStage { RAMP_TO_SOAK, SOAKING, RAMP_TO_REFLOW, COOLING, IDLE };
 
 struct Profile {
     float soakTemp;
@@ -50,17 +50,38 @@ static void clearControllerError() {
     controller.error = 0;
 }
 
+static void setStageLED(uint8_t gpio) {
+    switch (gpio) {
+        case LED_IDLE_GPIO:
+            gpio_put(LED_IDLE_GPIO, 1);
+            gpio_put_masked((1 << LED_WORKING_GPIO) | (1 << LED_COOLING_GPIO), 0);
+            break;
+        case LED_WORKING_GPIO:
+            gpio_put(LED_WORKING_GPIO, 1);
+            gpio_put_masked((1 << LED_IDLE_GPIO) | (1 << LED_COOLING_GPIO), 0);
+            break;
+        case LED_COOLING_GPIO:
+            gpio_put(LED_COOLING_GPIO, 1);
+            gpio_put_masked((1 << LED_IDLE_GPIO) | (1 << LED_WORKING_GPIO), 0);
+            break;
+        default:
+            gpio_put_masked(LED_MASK, 0);
+    }
+}
+
 void vStartControl() {
     LOG_INFO("ramp to soak");
+    setStageLED(LED_WORKING_GPIO);
     clearControllerError();
     stage = RAMP_TO_SOAK;
 }
 
 void vStopControl() {
-    stage = IDLE;
+    stage = COOLING;
     dutyCycle = 0;
     gpio_put(SSR_CONTROL_GPIO, 0);
     graphicsClearDutyCycle();
+    setStageLED(LED_COOLING_GPIO);
 }
 
 void vControlReflowTask(__unused void *pvParameters) {
@@ -88,14 +109,21 @@ void vControlReflowTask(__unused void *pvParameters) {
             case RAMP_TO_REFLOW:
                 targetTemperature = lowTempProfile.reflowTemp;
                 if (temperature >= lowTempProfile.reflowTemp) {
-                    LOG_INFO("reflow ended");
+                    LOG_INFO("cooling");
                     xTaskNotify(
                         beepTaskHandle, beeper_dump(&beeperAlertEnd), eSetValueWithOverwrite
                     );
                     vStopControl();
+                    gpio_put(LED_COOLING_GPIO, 1);
                     continue;
                 }
                 break;
+            case COOLING:
+                if (temperature <= 50) {
+                    setStageLED(LED_IDLE_GPIO);
+                    stage = IDLE;
+                }
+                continue;
         }
 
         pid_compute_error(temperature, targetTemperature, &controller);
