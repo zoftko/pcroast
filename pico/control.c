@@ -19,11 +19,11 @@ struct Profile lowTempProfile = {.soakTemp = 90, .soakTime = 60, .reflowTemp = 1
 
 struct PidController controller = {
     .output = 0,
-    .gainK1 = 66.42f,
-    .gainK2 = -57.33f,
-    .gainK3 = 27.5f,
-    .error2 = 0,
-    .error1 = 0,
+    .gainPro = 3.2f,
+    .gainInt = 0.25f,
+    .gainDer = -62.5f,
+    .sumError = 0,
+    .lastError = 0,
     .error = 0,
 };
 
@@ -41,8 +41,8 @@ static float targetTemperature = 0;
 extern TaskHandle_t controlReflowTaskHandle;
 
 static void clearControllerError() {
-    controller.error2 = 0;
-    controller.error1 = 0;
+    controller.sumError = 0;
+    controller.lastError = 0;
     controller.error = 0;
 }
 
@@ -91,13 +91,7 @@ void vControlReflowTask(__unused void *pvParameters) {
         }
 
         pid_compute_error(temperature, targetTemperature, &controller);
-        if (controller.error <= 0) {
-            dutyCycle = 0;
-        } else if (controller.error > 100) {
-            dutyCycle = 100;
-        } else {
-            dutyCycle = (uint8_t)controller.error;
-        }
+        dutyCycle = (uint8_t)controller.error;
         seconds++;
     }
 }
