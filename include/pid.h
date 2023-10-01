@@ -3,12 +3,12 @@
 
 struct PidController {
     float output;
-    float gainK1;
-    float gainK2;
-    float gainK3;
-    float error2;
-    float error1;
+    float gainPro;
+    float gainInt;
+    float gainDer;
     float error;
+    float sumError;
+    float lastError;
 };
 
 void pid_compute_error(float reading, float target, struct PidController *controller);
