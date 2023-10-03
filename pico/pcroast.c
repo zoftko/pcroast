@@ -23,7 +23,7 @@ TaskHandle_t controlReflowTaskHandle;
 
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
 
-static volatile uint8_t reflowStarted = false;
+volatile uint8_t reflowStarted = false;
 
 void startButtonCallback(void) {
     if (gpio_get_irq_event_mask(START_BTN) & GPIO_IRQ_EDGE_FALL) {
