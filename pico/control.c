@@ -20,15 +20,17 @@ struct Profile lowTempProfile = {.soakTemp = 90, .soakTime = 60, .reflowTemp = 1
 
 struct PidController controller = {
     .output = 0,
-    .gainPro = 3.2f,
+    .gainPro = 3.0f,
     .gainInt = 0.25f,
-    .gainDer = -62.5f,
+    .gainDer = -100.0f,
     .sumError = 0,
     .lastError = 0,
     .error = 0,
 };
 
 const struct BeeperConfig beeperAlertEnd = {.beeps = 5, .msOn = 600, .msOff = 400};
+
+extern volatile uint8_t reflowStarted;
 
 static volatile uint16_t seconds = 0;
 static volatile uint16_t soakSeconds = 0;
@@ -121,6 +123,7 @@ void vControlReflowTask(__unused void *pvParameters) {
             case COOLING:
                 if (temperature <= 50) {
                     setStageLED(LED_IDLE_GPIO);
+                    reflowStarted = false;
                     stage = IDLE;
                 }
                 continue;
