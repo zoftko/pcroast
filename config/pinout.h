@@ -36,6 +36,10 @@
 
 #define ZERO_CROSS_GPIO 6
 
+#ifndef TEMP_READING_AMOUNT
+#define TEMP_READING_AMOUNT 4
+#endif
+
 #define SSR_CONTROL_GPIO 3
 
 #define LED_IDLE_GPIO 11

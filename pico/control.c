@@ -18,17 +18,22 @@ struct Profile {
 
 struct Profile lowTempProfile = {.soakTemp = 90, .soakTime = 60, .reflowTemp = 150};
 
+static const float rampSoakDerGain = -85.0f;
+static const float rampReflowDerGain = -35.0f;
+
 struct PidController controller = {
     .output = 0,
-    .gainPro = 3.0f,
-    .gainInt = 0.25f,
-    .gainDer = -100.0f,
+    .gainPro = 2.33f,
+    .gainInt = 0.21f,
+    .gainDer = rampSoakDerGain,
     .sumError = 0,
     .lastError = 0,
     .error = 0,
 };
 
 const struct BeeperConfig beeperAlertEnd = {.beeps = 5, .msOn = 600, .msOff = 400};
+const struct BeeperConfig beeperSoakStart = {.beeps = 1, .msOn = 1000, .msOff = 0};
+const struct BeeperConfig beeperSoakEnd = {.beeps = 2, .msOn = 500, .msOff = 300};
 
 extern volatile uint8_t reflowStarted;
 
@@ -40,7 +45,8 @@ static volatile uint8_t dutyCycle = 0;
 static volatile uint32_t zeroCrossEvents = 0;
 
 static uint16_t reading;
-static float temperature;
+static float tempReading;
+static float temperature = 0;
 static float targetTemperature = 0;
 
 extern TaskHandle_t controlReflowTaskHandle;
@@ -80,6 +86,7 @@ void vStartControl() {
     LOG_INFO("ramp to soak");
     setStageLED(LED_WORKING_GPIO);
     clearControllerError();
+    controller.gainDer = rampSoakDerGain;
     stage = RAMP_TO_SOAK;
 }
 
@@ -102,6 +109,9 @@ void vControlReflowTask(__unused void *pvParameters) {
                 targetTemperature = lowTempProfile.soakTemp;
                 if (temperature >= lowTempProfile.soakTemp) {
                     LOG_INFO("soaking");
+                    xTaskNotify(
+                        beepTaskHandle, beeper_dump(&beeperSoakStart), eSetValueWithOverwrite
+                    );
                     stage = SOAKING;
                 }
                 break;
@@ -109,7 +119,11 @@ void vControlReflowTask(__unused void *pvParameters) {
                 soakSeconds++;
                 if (soakSeconds >= lowTempProfile.soakTime) {
                     LOG_INFO("ramp to reflow");
+                    xTaskNotify(
+                        beepTaskHandle, beeper_dump(&beeperSoakEnd), eSetValueWithOverwrite
+                    );
                     clearControllerError();
+                    controller.gainDer = rampReflowDerGain;
                     stage = RAMP_TO_REFLOW;
                 }
                 break;
@@ -142,8 +156,9 @@ void vControlReflowTask(__unused void *pvParameters) {
 }
 
 void vReadTemperatureTask(__unused void *pvParameters) {
+    static uint8_t temperatureReads = 0;
     while (1) {
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        vTaskDelay(pdMS_TO_TICKS(1000 / TEMP_READING_AMOUNT));
         gpio_put(SPI1_6675_CS, 0);
         vTaskDelay(pdMS_TO_TICKS(5));
         gpio_put(SPI1_6675_CS, 1);
@@ -153,11 +168,18 @@ void vReadTemperatureTask(__unused void *pvParameters) {
         spi_read16_blocking(spi1, 0, &reading, 1);
         gpio_put(SPI1_6675_CS, 1);
 
-        if (max6675_process(reading, &temperature)) {
+        if (max6675_process(reading, &tempReading)) {
             LOG_WARNING("incorrect reading from spi1");
         } else {
+            temperatureReads++;
+            temperature += tempReading;
+            if (temperatureReads != TEMP_READING_AMOUNT) { continue; }
+
+            temperatureReads = 0;
+            temperature /= TEMP_READING_AMOUNT;
             xTaskNotify(controlReflowTaskHandle, 0, eNoAction);
             graphicsSetTemperature(temperature);
+            temperature = 0;
         }
     }
 }

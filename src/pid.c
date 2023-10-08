@@ -21,7 +21,7 @@ void pid_compute_error(float reading, float target, struct PidController *contro
 
     dterm = controller->gainDer * (controller->lastError - error);
     controller->lastError = error;
-    limit_float(&dterm, 100, -100);
+    limit_float(&dterm, 0, -100);
 
     controller->error = pterm + iterm + dterm;
     limit_float(&(controller->error), 100, 0);
