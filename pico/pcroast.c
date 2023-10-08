@@ -157,6 +157,7 @@ void vStartupTask(__unused void *pvParameters) {
     configASSERT(&stopControlTaskHandle);
     LOG_DEBUG("stop control task created");
 
+    vInitControl();
     xTaskCreateAffinitySet(
         vControlReflowTask, "CtrlTask", configMINIMAL_STACK_SIZE, NULL, tskIDLE_PRIORITY + 3, 0x01,
         &controlReflowTaskHandle
