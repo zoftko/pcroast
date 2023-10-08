@@ -15,6 +15,7 @@ void vStartControl();
 void vStopControl();
 void vControlReflowTask(void *pvParameters);
 void vReadTemperatureTask(void *pvParameters);
+void vInitControl();
 
 void vWifiTask(void *pvParameters);
 void vNetifStatusCallback(struct netif *netif);

@@ -71,6 +71,11 @@ static void setStageLED(uint8_t gpio) {
     }
 }
 
+void vInitControl() {
+    setStageLED(LED_IDLE_GPIO);
+    stage = IDLE;
+}
+
 void vStartControl() {
     LOG_INFO("ramp to soak");
     setStageLED(LED_WORKING_GPIO);
