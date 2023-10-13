@@ -23,10 +23,7 @@ struct Measurement {
     float temperature;
 };
 
-struct Profile lowTempProfile = {.soakTemp = 90, .soakTime = 60, .reflowTemp = 150};
-
-static const float rampSoakDerGain = -85.0f;
-static const float rampReflowDerGain = -35.0f;
+struct Profile lowTempProfile = {.soakTemp = 110, .soakTime = 70, .reflowTemp = 165};
 
 static char sessionPayload[256];
 struct HttpRequest newSessionRequest = {
@@ -37,15 +34,27 @@ static char measurementPayload[512];
 struct HttpRequest postMeasurementRequest = {
     .request_line = "POST /api/measurement HTTP/1.1\r\n", .payload = measurementPayload};
 
-struct PidController controller = {
+struct PidController soakController = {
     .output = 0,
-    .gainPro = 2.33f,
-    .gainInt = 0.21f,
-    .gainDer = rampSoakDerGain,
+    .gainPro = 2.5f,
+    .gainInt = 0.25f,
+    .gainDer = -85.0f,
     .sumError = 0,
     .lastError = 0,
     .error = 0,
 };
+
+struct PidController reflowController = {
+    .output = 0,
+    .gainPro = 3.0f,
+    .gainInt = 0.35f,
+    .gainDer = -28.0f,
+    .sumError = 0,
+    .lastError = 0,
+    .error = 0,
+};
+
+struct PidController *currentController = &soakController;
 
 const struct BeeperConfig beeperAlertEnd = {.beeps = 5, .msOn = 600, .msOff = 400};
 const struct BeeperConfig beeperSoakStart = {.beeps = 1, .msOn = 1000, .msOff = 0};
@@ -72,9 +81,13 @@ extern TaskHandle_t controlReflowTaskHandle;
 extern TaskHandle_t beepTaskHandle;
 
 static void clearControllerError() {
-    controller.sumError = 0;
-    controller.lastError = 0;
-    controller.error = 0;
+    soakController.sumError = 0;
+    soakController.lastError = 0;
+    soakController.error = 0;
+
+    reflowController.sumError = 0;
+    reflowController.lastError = 0;
+    reflowController.error = 0;
 }
 
 static void setStageLED(uint8_t gpio) {
@@ -106,7 +119,7 @@ void vStartControl() {
     xTaskNotify(controlHttpLoggerHandle, CREATE_SESSION, eSetValueWithOverwrite);
     setStageLED(LED_WORKING_GPIO);
     clearControllerError();
-    controller.gainDer = rampSoakDerGain;
+    currentController = &soakController;
     stage = RAMP_TO_SOAK;
 }
 
@@ -144,7 +157,7 @@ void vControlReflowTask(__unused void *pvParameters) {
                         beepTaskHandle, beeper_dump(&beeperSoakEnd), eSetValueWithOverwrite
                     );
                     clearControllerError();
-                    controller.gainDer = rampReflowDerGain;
+                    currentController = &reflowController;
                     stage = RAMP_TO_REFLOW;
                 }
                 break;
@@ -169,8 +182,8 @@ void vControlReflowTask(__unused void *pvParameters) {
                 continue;
         }
 
-        pid_compute_error(temperature, targetTemperature, &controller);
-        dutyCycle = (uint8_t)controller.error;
+        pid_compute_error(temperature, targetTemperature, currentController);
+        dutyCycle = (uint8_t)currentController->error;
         graphicsSetDutyCycle(dutyCycle);
 
         volatile struct Measurement *measurement = &(measurements[seconds % 20]);
