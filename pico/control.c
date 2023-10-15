@@ -38,7 +38,7 @@ struct PidController soakController = {
     .output = 0,
     .gainPro = 2.5f,
     .gainInt = 0.25f,
-    .gainDer = -85.0f,
+    .gainDer = -66.5f,
     .sumError = 0,
     .lastError = 0,
     .error = 0,
@@ -46,9 +46,9 @@ struct PidController soakController = {
 
 struct PidController reflowController = {
     .output = 0,
-    .gainPro = 3.0f,
+    .gainPro = 3.5f,
     .gainInt = 0.35f,
-    .gainDer = -28.0f,
+    .gainDer = -20.0f,
     .sumError = 0,
     .lastError = 0,
     .error = 0,
@@ -120,13 +120,13 @@ void vStartControl() {
     setStageLED(LED_WORKING_GPIO);
     clearControllerError();
     currentController = &soakController;
+    seconds = 0;
     stage = RAMP_TO_SOAK;
 }
 
 void vStopControl() {
     stage = COOLING;
     dutyCycle = 0;
-    seconds = 0;
     gpio_put(SSR_CONTROL_GPIO, 0);
     graphicsClearDutyCycle();
     setStageLED(LED_COOLING_GPIO);
@@ -160,6 +160,7 @@ void vControlReflowTask(__unused void *pvParameters) {
                     currentController = &reflowController;
                     stage = RAMP_TO_REFLOW;
                 }
+
                 break;
             case RAMP_TO_REFLOW:
                 targetTemperature = lowTempProfile.reflowTemp;
@@ -175,16 +176,19 @@ void vControlReflowTask(__unused void *pvParameters) {
                 break;
             case COOLING:
                 if (temperature <= 50) {
+                    LOG_INFO("idle");
                     setStageLED(LED_IDLE_GPIO);
                     reflowStarted = false;
                     stage = IDLE;
+                    continue;
                 }
-                continue;
         }
 
-        pid_compute_error(temperature, targetTemperature, currentController);
-        dutyCycle = (uint8_t)currentController->error;
-        graphicsSetDutyCycle(dutyCycle);
+        if (stage != COOLING) {
+            pid_compute_error(temperature, targetTemperature, currentController);
+            dutyCycle = (uint8_t)currentController->error;
+            graphicsSetDutyCycle(dutyCycle);
+        }
 
         volatile struct Measurement *measurement = &(measurements[seconds % 20]);
         measurement->temperature = temperature;
