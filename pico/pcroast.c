@@ -26,6 +26,7 @@ TaskHandle_t httpRequestTaskHandle;
 const struct BeeperConfig beeperStartup = {.beeps = 2, .msOn = 100, .msOff = 100};
 
 volatile uint8_t reflowStarted = false;
+volatile uint32_t blinkDelay = 1980;
 
 void startButtonCallback(void) {
     if (gpio_get_irq_event_mask(START_BTN) & GPIO_IRQ_EDGE_FALL) {
@@ -63,7 +64,7 @@ void vBlinkLedTask(__unused void *pvParameters) {
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 1);
         vTaskDelay(pdMS_TO_TICKS(20));
         cyw43_arch_gpio_put(CYW43_WL_GPIO_LED_PIN, 0);
-        vTaskDelay(pdMS_TO_TICKS(1980));
+        vTaskDelay(pdMS_TO_TICKS(blinkDelay));
     }
 }
 

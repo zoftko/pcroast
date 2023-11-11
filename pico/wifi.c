@@ -17,6 +17,8 @@ static char http_response_first_line[64];
 static char strIpAddress[16] = {0};
 static ip_addr_t api_addr;
 
+extern uint32_t blinkDelay;
+
 static void httpSend(struct tcp_pcb *tpcb, struct HttpRequest *request) {
     size_t payload_size;
 
@@ -92,8 +94,10 @@ void vWifiTask(__unused void *pvParameters) {
                 WIFI_SSID, WIFI_PSK, CYW43_AUTH_WPA2_AES_PSK, WIFI_TIMEOUT
             )) {
             LOG_WARNING("failed to connect");
+            blinkDelay = 300;
         } else {
             LOG_INFO("connected");
+            blinkDelay = 1980;
         }
     }
 }
